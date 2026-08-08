@@ -335,7 +335,8 @@ export class VerbResolver {
     const room = this.state.rooms[player.room];
 
     // Target could be an exit direction or a named object
-    const exit = room.exits[targetId] || room.exits[this.findExitByName(room, targetId)];
+    const exitDir = this.findExitByName(room, targetId);
+    const exit = room.exits[targetId] || (exitDir ? room.exits[exitDir] : undefined);
 
     if (!exit) {
       // Maybe it's an object in the room — walk to it
