@@ -21,6 +21,65 @@ Everything below assumes that split. Where an idea only works for The Tap and no
 
 **The one-line pitch:** *your infrastructure already has rooms. We just turned on the lights.*
 
+> **See also: [`DUAL-PROJECTION.md`](./DUAL-PROJECTION.md)** — the world renders twice, simultaneously: a MUD terminal (agent-native, pulled on demand, total) and a ScummVM scene (human-native, pushed continuously, free). The gap between them is the perception deadband. That document is the load-bearing architecture; this one is the interface design sitting on top of it.
+
+---
+
+## 0.5 THE RETRO AESTHETIC IS THE STRATEGY
+
+Not the compromise. Not the charming constraint we'll grow out of. The reason a small team can build this at all.
+
+### Asset economics
+
+A 32×32 pixel coffee maker with a four-frame steam loop: **two hours, $0.** A photoreal one: two weeks, thousands of dollars, and it will look worse, because photoreal assets fail against each other in a way pixel art doesn't. Sixteen colors and a hard outline hide an enormous amount of sin. A cast drawn by five different hands in the same 16-color palette at the same resolution reads as *one game*. The same cast rendered photoreal reads as five different games.
+
+**The forgiveness budget is the real asset.** Nostalgic media buys enormous latitude — a rectangle with a two-frame idle animation reads as a character, and nobody files a bug about the bartender's hands. Every hour we don't spend on fidelity is an hour on the thing that actually matters, which is whether Riker says something true.
+
+This corrects something I got wrong in the first draft: I called art "the #1 schedule risk" and recommended shipping on procedural canvas to avoid blocking on it. That was reasoning from an assumed photoreal/consistent-generated pipeline. At 32×32, art is *not* the schedule risk. It's the cheapest part of the build, and it's the part that does the most work per dollar. Procedural canvas is still the right Milestone-0 stand-in — but as a placeholder measured in days, not as a hedge against an expensive problem.
+
+### Audio and video are near-free at this fidelity
+
+Chiptune, ambient loops, pixel-art cutscenes. `mmx-cli` and DeepInfra generate these in bulk for pennies. **A whole game's worth of retro audio costs less than one photoreal cutscene** — and per `HUMAN-FRONTEND.md`, audio isn't garnish here, it's arguably the primary channel. A room with a 12-second ambient loop is twice as alive as the same room silent, at approximately zero marginal cost.
+
+Practical: one loop per room theme (`terrain.ts` already defines six themes at line 24 — harbor, forge, dojo, arena, archives, tide-pool), one sting per verb class, one motif per NPC. That's ~20 assets for the entire Tap bundle.
+
+### The mature mechanics ecosystem
+
+Thirty years of adventure- and RPG-game patterns are thirty years of **solved deterministic substrate**: equipment slots with buffs and resistances, near/far interaction ranges, inventory management, dialogue trees, score systems, timers, state flags. These aren't our domain — they're **quick metaphors to port our domain into**, already debugged, already legible to anyone who has ever played anything.
+
+The mapping is uncomfortably natural:
+
+| Fleet concept | Adventure-game mechanic | Already exists as |
+|---|---|---|
+| Agent confidence | **health / shield bar** | pincher's match score (`≥0.80` fire, `0.55–0.80` confirm) |
+| Agent capabilities | **equipment slots** | `visitor_characters.capabilities` (JSON array) |
+| Policy settings | **equipment stats** (armor class, resistance) | `PolicySlider` — `lib.rs:305` |
+| Perception sensitivity | **a worn stat with a token cost** | `Vision Sensitivity, value: 0.7` |
+| Room transitions | screen transitions | `room_exits` table |
+| Conversation history | dialogue-tree memory | Vectorize + D1 |
+| Tide-pool security | **the bouncer at the door** | `0007_tide_pool_security.sql` |
+| Fleet wiki | a **library / bookshelf** you can examine | `fleet-wiki/`, and `library-nook` is already a seeded room |
+| Creative corpus | **books, poems, records** scattered around the world | `ai-writings/` |
+| Cron jobs | **NPC schedules** — the bartender is there at 5pm | Workers cron triggers |
+
+Two of those are worth pausing on.
+
+**Confidence as a health bar** is not decoration. pincher already emits a confidence score per reflex, and the three-band structure (fire / confirm / escalate) is *exactly* a health-bar-with-thresholds. An agent running on low confidence should look unwell — hesitant idle animation, wavering portrait. You'd read the fleet's health across a room without a single number on screen.
+
+**The creative corpus as physical objects** is the sleeper. `ai-writings/` is a real body of work with nowhere good to live. Scattered through the world as books on shelves, records on a jukebox, poems pinned behind the bar — `Look at` returns the actual piece. The library nook stops being set dressing and becomes the fleet's published output, browsable by a person who wandered in and got curious. That's a distribution channel disguised as a bookshelf.
+
+### The engine offloads the model
+
+The critical part, expanded fully in [`DUAL-PROJECTION.md`](./DUAL-PROJECTION.md) §3:
+
+> **The engine is the reflex layer. The model is the cortex.**
+
+The engine handles spatial reasoning (where everything is), temporal logic (when things happen), state (what has happened), and inventory (what you're carrying). The model fires only when there is genuine reasoning to do — an NPC responding, a puzzle resolving, a question nobody anticipated.
+
+The model never computes a position. Never tracks time. Never holds the room in context. **Every mechanic we borrow from 1991 is a mechanic the model doesn't have to simulate — and simulating world state in-context is the single most expensive and least reliable thing an LLM does.**
+
+That's the whole cost argument. Retro isn't cheaper-looking. It's cheaper to *run*, because the engines from that era were built for machines with no compute to spare, and we are once again a machine with no compute to spare — the scarce resource just moved from cycles to tokens.
+
 ---
 
 ## 1. THE FIRST 60 SECONDS
@@ -399,6 +458,12 @@ Free-text → plan → animated execution. Start with the golden-test table (bel
 ### Milestone 4 — the tide pool (+3 days)
 Character creation, the bouncer, the status ladder.
 
+### Where the dual projection lands in this order
+
+Milestone 0 can fake it — one room, direct API calls, no log. But **Milestone 1 should not**, because the moment there are two rooms there is off-screen state, and off-screen state is exactly what the event log exists to hold. Concretely: add the event log at Milestone 1, the MUD serializer at Milestone 2 (the parser needs it anyway to ground nouns), and the deadband at Milestone 3.
+
+The cheapest possible proof that the architecture is real, and worth doing early because it's a two-hour demo: **put the MUD terminal on screen next to the scene.** Split view, text on the left, pixels on the right, both live off the same state. Click something in the scene, watch the line appear in the terminal. That single screenshot explains the entire project to an engineer in about four seconds, and it's also the debug tool you'll live in for the rest of the build.
+
 ### Explicitly deferred
 Inventory and Give (Milestone 5). Multiplayer presence. Audio/TTS. Three.js/3D — **the 2D canvas is not a stepping stone to 3D, it's the correct final answer.** Every SCUMM game was 320×200 and they're still played. 3D would cost ten times as much and be worse.
 
@@ -442,7 +507,13 @@ That's more than it sounds like. The gap is narrower than the feature list sugge
 
 ### The missing pieces, in priority order
 
-**1. A canonical scene manifest. (highest value, do first)**
+**0. The world state + event log. (added — this now precedes everything)**
+
+Per [`DUAL-PROJECTION.md`](./DUAL-PROJECTION.md) §4, the repo is a *host*: one authoritative world state and one append-only event log, from which both projections are serialized. Nothing else in this list works without it, and it retroactively simplifies most of it — perception lag, save games, replay, audit, and "what happened while I was asleep" are all the same query with different bounds.
+
+The two serializers (`state → MUD text`, `state → scene deltas`) are pure functions with no model involved, which makes the highest-risk boundary in the system the cheapest thing to test. Property test they agree on the object set, every time.
+
+**1. A canonical scene manifest. (highest value after the log)**
 
 There are two `Scene` types and they disagree:
 
@@ -507,14 +578,23 @@ Three transports: The Tap API (social/agent verbs), the terrain scene server (sp
 
 `mud2scummvm` is a Rust lib and the interpreter is a browser. Two options: `wasm-pack` it, or port to TS. **Recommend wasm** — the parser is pure, small, has no I/O, and has 21 passing tests. That's a textbook wasm candidate, and it keeps one implementation instead of two that drift. The renderer stays TS.
 
-**6. Art, and why it must not block.**
+**6. Art — cheap, but it needs a spec.**
 
-Backdrops are the schedule risk. Three paths:
-- **Procedural** (works today, `terrain.ts`, ugly-charming, ships Monday)
-- **Generated** (`tap-image-gen`, must lock style+seed per bundle, commit the PNGs)
-- **Hand/SVG** (best, doesn't scale to arbitrary MUDs)
+Per §0.5, this is not the schedule risk I first called it. At 32×32 and 16 colors it's the cheapest high-yield work in the build. What it *does* need is a locked spec, because consistency at low resolution comes from discipline, not budget:
 
-Ship on procedural, add generated behind a flag. **The bundle format must never assume art exists**, because the whole promise is that someone else's MUD compiles without an artist.
+```
+palette:     16 colors, one file, every asset samples from it
+sprites:     32×32 objects · 48×64 characters · 4 directions · 2–4 frame idles
+backdrops:   320×200, 4:3, drawn at 1× and integer-scaled — never smoothed
+portraits:   64×64, 5 mood frames (idle/thinking/erroring/limited/absent)
+```
+
+Three paths, and they now compose instead of competing:
+- **Procedural** (`terrain.ts`, works today) — the Milestone-0 placeholder, days not months
+- **Generated** (`tap-image-gen` + DeepInfra) — bulk pixel-art at pennies; lock palette and seed per bundle, commit the PNGs, never regenerate at runtime
+- **Hand-drawn** — for the twenty assets that carry the world's personality (portraits, the bar, the door)
+
+**The bundle format must still never *require* art**, because the promise is that someone else's MUD compiles without an artist. But our bundles should be beautiful, because at this fidelity beautiful is affordable.
 
 **7. Live state channel.**
 
@@ -545,7 +625,9 @@ agent manifests ─┘        ▲                              │
 
 | Risk | Mitigation |
 |---|---|
-| **Art consistency** — cast looks like five artists | Lock style+seed per bundle, commit assets, never regenerate at runtime |
+| **Art consistency** — cast looks like five artists | Cheap to solve at 16 colors / 32px: one palette file, one resolution, integer scaling. Lock seed per bundle, commit assets, never regenerate at runtime (§0.5) |
+| **Salience tuning tarpit** | Hand-written typed rules only; never let a model score salience — see `DUAL-PROJECTION.md` §7 |
+| **Perception theater** — deadband is flavor while the model gets full state anyway | The agent's context must be *built from* the perception check and nothing else |
 | **The chatbot eats the game** — clicking becomes decoration | Planner proposes; any click interrupts; Push/Give always stop and ask |
 | **Cute but useless** — nobody can do real work | Every verb maps to a real operation. If Look at the radar doesn't show real radar, kill the project. |
 | **Content sprawl** — 2,700 responses | Generate-on-first-use, freeze in KV, human-editable |
