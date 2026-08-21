@@ -4,7 +4,7 @@
 
 **Status:** Load-bearing integration map, 2026-08-08
 **Authored by:** Synergy Cartographer (subagent mission)
-**Repos surveyed:** slackwater-rust, slackwater-perception, mud-arena, git-native-mud, forgemaster, eisenstein, holodeck, ternary-tenforward, thought-amplifier, songforge, roblox-craftmind-agents
+**Repos surveyed:** slackwater-rust, slackwater-perception, mud-engine, git-native-mud, forgemaster, eisenstein, holodeck, confidence-cascade, thought-amplifier, songforge, roblox-craftmind-agents
 
 ---
 
@@ -13,7 +13,7 @@
 | # | Organ A | Organ B | Blood Vessel | Status |
 |---|---------|---------|--------------|--------|
 | 1 | git-native-mud | Living World (shared-world.ts) | Room commits = room history | **Bridge built** |
-| 2 | ternary-tenforward | The Tap API | Multi-turn conversation engine | **Bridge built** |
+| 2 | confidence-cascade | The Tap API | Multi-turn conversation engine | **Bridge built** |
 | 3 | holodeck | Wesley's Training | Holodeck = training room in world | **Bridge built** |
 | 4 | eisenstein | Plato's Shell (DUAL-PROJECTION) | Zero-drift scene positioning | **Documented** |
 | 5 | slackwater-perception | Camera Rooms | Convergence detection for "what changed?" | **Documented + adapter** |
@@ -187,7 +187,7 @@ export class GitRoomBridge {
 
 ---
 
-## Synergy 2: ternary-tenforward ↔ The Tap
+## Synergy 2: confidence-cascade ↔ The Tap
 
 ### The Connection
 

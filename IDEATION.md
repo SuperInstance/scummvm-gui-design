@@ -58,7 +58,7 @@ The mapping is uncomfortably natural:
 | Room transitions | screen transitions | `room_exits` table |
 | Conversation history | dialogue-tree memory | Vectorize + D1 |
 | Tide-pool security | **the bouncer at the door** | `0007_tide_pool_security.sql` |
-| Fleet wiki | a **library / bookshelf** you can examine | `fleet-wiki/`, and `library-nook` is already a seeded room |
+| Fleet wiki | a **library / bookshelf** you can examine | `lucineer-fleet-wiki/`, and `library-nook` is already a seeded room |
 | Creative corpus | **books, poems, records** scattered around the world | `ai-writings/` |
 | Cron jobs | **NPC schedules** — the bartender is there at 5pm | Workers cron triggers |
 
